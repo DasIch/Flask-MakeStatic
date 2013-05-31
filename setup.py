@@ -1,11 +1,12 @@
 # coding: utf-8
-"""
-Flask-MakeStatic
-================
+import os
 
-Flask-MakeStatic provides a simple YAML based configuration to compile assets.
-"""
 from setuptools import setup
+
+
+def get_long_description():
+    with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
+        return readme.read()
 
 
 setup(
@@ -16,7 +17,7 @@ setup(
     author='Daniel Neuhäuser',
     author_email='ich@danielneuhaeuser.de',
     description='Make for your flask app assets',
-    long_description=__doc__,
+    long_description=get_long_description(),
     packages=['flask_makestatic'],
     zip_safe=False,
     include_package_data=True,
