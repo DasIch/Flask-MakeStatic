@@ -11,4 +11,6 @@ install:
   - pip install git+git://github.com/mitsuhiko/flask.git#egg=Flask
   - pip install --editable .
 
-script: make test
+script:
+  - make test
+  - sphinx-build -aEWb doctest docs docs/_build
