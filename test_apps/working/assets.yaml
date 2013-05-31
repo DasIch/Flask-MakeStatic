@@ -1,0 +1,2 @@
+foo: cp {asset} {static}
+bar: cat {asset} | sort > {static}
