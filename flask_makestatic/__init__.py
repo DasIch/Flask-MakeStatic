@@ -96,9 +96,9 @@ class MakeStatic(object):
         make_static.init_app(app)
 
     Once initialized :class:`MakeStatic` will parse the `assets.yaml`
-    configuration file corresponding to the initialized application and replace
-    :meth:`flask.Flask.send_static_file` with a version that compiles assets
-    on demand.
+    configuration file corresponding to the initialized application and
+    replaces :meth:`flask.Flask.send_static_file` with a version that compiles
+    assets on demand.
 
     This is very useful during development and may be a feasable approach even
     on low traffic sites. In production you probably do not want to compile
