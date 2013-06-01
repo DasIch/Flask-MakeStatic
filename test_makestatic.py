@@ -1,7 +1,6 @@
 # coding: utf-8
 import os
 import sys
-import time
 import atexit
 import tempfile
 import unittest
@@ -116,9 +115,11 @@ class MakeStaticTestCase(unittest.TestCase):
 class InternalTestCase(unittest.TestCase):
     def test_is_newer(self):
         a = get_temporary_filename()
-        # precision of time stamps may be as low as 1s
-        time.sleep(1)
         b = get_temporary_filename()
+        stat = os.stat(a)
+        # bump modified time manually as precision might be as low as 1s and we
+        # don't want to sleep for that long
+        os.utime(b, (stat.st_atime, stat.st_mtime + 1))
 
         self.assertTrue(is_newer(b, a))
         self.assertFalse(is_newer(a, a))
