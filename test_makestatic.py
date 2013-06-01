@@ -50,6 +50,9 @@ class MakeStaticTestCase(unittest.TestCase):
             with closing(app.send_static_file('foo')) as response:
                 self.assertEqual(response.status_code, 200)
 
+            with closing(app.send_static_file('spam')) as response:
+                self.assertEqual(response.status_code, 200)
+
             with closing(app.send_static_file('bar')) as response:
                 self.assertEqual(response.status_code, 200)
                 response.direct_passthrough = False
@@ -64,6 +67,9 @@ class MakeStaticTestCase(unittest.TestCase):
 
         client = app.test_client()
         with closing(client.get('/static/foo')) as response:
+            self.assertEqual(response.status_code, 200)
+
+        with closing(client.get('/static/spam')) as response:
             self.assertEqual(response.status_code, 200)
 
         with closing(client.get('/static/bar')) as response:
@@ -84,6 +90,10 @@ class MakeStaticTestCase(unittest.TestCase):
         client = app.test_client()
         with closing(client.get('/static/foo')) as response:
             self.assertEqual(response.status_code, 200)
+
+        with closing(client.get('/static/spam')) as response:
+            self.assertEqual(response.status_code, 200)
+
         with closing(client.get('/static/bar')) as response:
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, b'abc\ndef\n')

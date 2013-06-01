@@ -43,8 +43,11 @@ def get_asset_path(filename):
     return os.path.join(get_assets_path(), filename)
 
 
-def compile(rule, asset, static):
-    subprocess.check_call(rule.format(asset=asset, static=static), shell=True)
+def compile(rules, asset, static):
+    for rule in rules:
+        subprocess.check_call(rule.format(asset=asset, static=static,
+                                          static_dir=current_app.static_folder),
+                              shell=True)
 
 
 def is_newer(checked, against):
@@ -134,15 +137,15 @@ class MakeStatic(object):
             for rule in parser.options(file_regex):
                 if parser.get(file_regex, rule) is not None:
                     raise ParsingError('unexpected value for %r' % file_regex)
-                config[file_regex] = rule
+                config.setdefault(file_regex, []).append(rule)
 
         file_regexes = []
-        rules = []
-        for file_regex, rule in iteritems(config):
+        rulesets = []
+        for file_regex, rules in iteritems(config):
             file_regexes.append('(%s)' % file_regex)
-            rules.append(rule)
+            rulesets.append(rules)
         matcher = re.compile('^%s$' % '|'.join(file_regexes)).match
-        return matcher, rules
+        return matcher, rulesets
 
     def compile(self):
         """
