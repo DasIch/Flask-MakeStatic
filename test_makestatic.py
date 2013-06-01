@@ -3,7 +3,6 @@ import os
 import sys
 import time
 import atexit
-import shutil
 import tempfile
 import unittest
 from warnings import catch_warnings
@@ -33,8 +32,13 @@ class MakeStaticTestCase(unittest.TestCase):
         for test_app_dir in os.listdir(TEST_APPS):
             static_dir = os.path.join(TEST_APPS, test_app_dir, 'static')
             if os.path.isdir(static_dir):
-                shutil.rmtree(static_dir)
-                os.mkdir(static_dir)
+                for root, dirs, files in os.walk(static_dir):
+                    for file in files:
+                        if file == '.gitignore':
+                            continue
+                        os.remove(os.path.join(root, file))
+                    for dir in dirs:
+                        os.rmdir(os.path.join(root, dir))
 
     def test_send_static_file_patch(self):
         app = Flask('working')
