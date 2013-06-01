@@ -254,3 +254,7 @@ texinfo_documents = [
 # Example configuration for intersphinx: refer to the Python standard library.
 intersphinx_mapping = {'http://docs.python.org/': None,
                        'http://flask.pocoo.org/docs': None}
+
+
+def setup(app):
+    app.add_stylesheet('custom.css')
