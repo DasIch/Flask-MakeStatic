@@ -4,7 +4,7 @@ Flask-MakeStatic
 .. currentmodule:: flask.ext.makestatic
 
 Flask-MakeStatic is an extension for Flask_ that adds support for compilation
-of static files such as sass_ or coffeescript_.
+of static files such as sass_ or coffeescript_ files.
 
 .. _Flask: http://flask.pocoo.org/
 .. _sass: http://sass-lang.com/
