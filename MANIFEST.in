@@ -1,0 +1,5 @@
+include Makefile LICENSE.rst README.rst
+include test_makestatic.py
+recursive-include docs *
+prune docs/_build
+prune docs/_themes/.git
