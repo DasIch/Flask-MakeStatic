@@ -76,7 +76,9 @@ def wrap_send_static_file(app):
 
 
 class RuleMissing(Warning):
-    pass
+    """
+    Warning that is emitted if a rule cannot be found.
+    """
 
 
 class MakeStatic(object):
@@ -137,6 +139,9 @@ class MakeStatic(object):
 
         This works only when done within an application context of an
         initialized application.
+
+        Emits a :class:`RuleMissing` warning for each file in `assets` for
+        which no rule exists.
         """
         assets = get_assets_path()
         for root, _, files in os.walk(assets):

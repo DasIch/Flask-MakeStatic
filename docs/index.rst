@@ -55,3 +55,5 @@ API
 
 .. autoclass:: MakeStatic
    :members:
+
+.. autoclass:: RuleMissing
