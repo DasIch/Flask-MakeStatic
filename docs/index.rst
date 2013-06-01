@@ -10,14 +10,15 @@ of static files such as sass_ or coffeescript_ files.
 .. _sass: http://sass-lang.com/
 .. _coffeescript: http://coffeescript.org/
 
-In order to use it you simply create an `assets` directory and an `assets.yaml`
+In order to use it you simply create an `assets` directory and an `assets.cfg`
 file in the same directory as your `static` directory. `assets` should contain
-all files that require compilation and `assets.yaml` specified how the files in
+all files that require compilation and `assets.cfg` specified how the files in
 `assets` should be compiled.
 
-The simplest possible `assets.yaml` file would look like this::
+The simplest possible `assets.cfg` file would look like this::
 
-    .*: cp {asset} {static}
+    [.*]
+    cp {asset} {static}
 
 This defines a regular expression ``.*`` which matches any file in assets and
 copies the file to the `static` directory. ``{asset}`` will be replaced with
