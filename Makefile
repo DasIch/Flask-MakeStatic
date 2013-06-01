@@ -1,7 +1,10 @@
-.PHONY: test docs view-docs
+.PHONY: test style docs view-docs
 
-test:
+test: style
 	python test_makestatic.py
+
+style:
+	find flask_makestatic test_makestatic.py setup.py -iname "*.py" | xargs pyflakes
 
 docs:
 	make -C docs html
