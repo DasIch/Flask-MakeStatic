@@ -46,3 +46,12 @@ application::
 
     with app.app_context():
         makestatic.compile()
+
+
+API
+---
+
+.. module:: flask.ext.makestatic
+
+.. autoclass:: MakeStatic
+   :members:

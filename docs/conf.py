@@ -258,3 +258,6 @@ intersphinx_mapping = {'http://docs.python.org/': None,
 
 def setup(app):
     app.add_stylesheet('custom.css')
+
+
+autodoc_member_order = 'bysource'
