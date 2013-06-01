@@ -9,6 +9,8 @@ from warnings import catch_warnings
 from contextlib import closing
 
 from flask import Flask
+from werkzeug.exceptions import NotFound
+
 from flask.ext.makestatic import MakeStatic, is_newer, RuleMissing
 
 
@@ -54,6 +56,8 @@ class MakeStaticTestCase(unittest.TestCase):
                 response.direct_passthrough = False
                 self.assertEqual(response.data, b'abc\ndef\n')
 
+            self.assertRaises(NotFound, app.send_static_file, 'baz')
+
     def test_static_view_patch(self):
         app = Flask('working')
         make_static = MakeStatic(app)
@@ -62,9 +66,13 @@ class MakeStaticTestCase(unittest.TestCase):
         client = app.test_client()
         with closing(client.get('/static/foo')) as response:
             self.assertEqual(response.status_code, 200)
+
         with closing(client.get('/static/bar')) as response:
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, b'abc\ndef\n')
+
+        with closing(client.get('/static/baz')) as response:
+            self.assertEqual(response.status_code, 404)
 
     def test_compile(self):
         app = Flask('working')
@@ -117,6 +125,9 @@ class InternalTestCase(unittest.TestCase):
         self.assertFalse(is_newer(a, b))
 
         self.assertTrue(is_newer(a, 'SHOULD_NOT_EXIST'))
+
+        self.assertRaises(OSError, is_newer, 'SHOULD_NOT_EXIST', a)
+        self.assertRaises(OSError, is_newer, 'SHOULD_NOT_EXIST', 'ALSO_SHOULD_NOT_EXIST')
 
 
 def suite():

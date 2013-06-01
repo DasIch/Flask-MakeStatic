@@ -50,8 +50,9 @@ def is_newer(checked, against):
         against = os.stat(against).st_mtime
     except OSError as error:
         if error.errno == errno.ENOENT:
-            return True
-        raise
+            against = -1
+        else:
+            raise
     return os.stat(checked).st_mtime > against
 
 
@@ -62,8 +63,13 @@ def wrap_send_static_file(app):
         if rule is not None:
             static = get_static_path(filename)
             asset = get_asset_path(filename)
-            if is_newer(asset, static):
-                compile(rule, asset, static)
+            try:
+                newer = is_newer(asset, static)
+            except OSError:
+                pass # asset does not exist
+            else:
+                if newer:
+                    compile(rule, asset, static)
         return super(self.__class__, self).send_static_file(filename)
     app.send_static_file = send_static_file.__get__(app, app.__class__)
     app.view_functions['static'] = app.send_static_file
