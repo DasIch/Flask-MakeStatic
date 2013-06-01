@@ -22,10 +22,7 @@ setup(
     zip_safe=False,
     include_package_data=True,
     platforms='any',
-    install_requires=[
-        'Flask>=0.9',
-        'PyYAML>=3.10'
-    ],
+    install_requires=['Flask>=0.9'],
     test_suite='test_makestatic.suite',
     classifiers=[
         'Environment :: Web Environment',
@@ -34,7 +31,6 @@ setup(
         'Operating System :: OS Independent',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.3',

@@ -12,11 +12,13 @@ import errno
 import warnings
 import subprocess
 from functools import wraps
-
-import yaml
+try:
+    from configparser import RawConfigParser, ParsingError
+except ImportError:
+    from ConfigParser import RawConfigParser, ParsingError
 
 from flask import current_app
-from flask.ext.makestatic._compat import iteritems
+from flask.ext.makestatic._compat import iteritems, PY2
 
 
 def get_rule(filename):
@@ -97,7 +99,7 @@ class MakeStatic(object):
         app = Flask(__name__)
         make_static.init_app(app)
 
-    Once initialized :class:`MakeStatic` will parse the `assets.yaml`
+    Once initialized :class:`MakeStatic` will parse the `assets.cfg`
     configuration file corresponding to the initialized application and
     replaces :meth:`flask.Flask.send_static_file` with a version that compiles
     assets on demand.
@@ -117,14 +119,23 @@ class MakeStatic(object):
         want to use the :class:`MakeStatic` instance before creating a flask
         application.
         """
-        with app.open_resource('assets.yaml', 'rb') as config_file:
+        with app.open_resource('assets.cfg', 'r') as config_file:
             app.extensions['MakeStatic'] = self.parse_config(config_file)
         wrap_send_static_file(app)
 
     def parse_config(self, config_file):
-        config = yaml.safe_load(config_file)
-        if config is None: # empty file
-            config = {}
+        parser = RawConfigParser(allow_no_value=True)
+        if PY2:
+            parser.readfp(config_file)
+        else:
+            parser.read_file(config_file)
+        config = {}
+        for file_regex in parser.sections():
+            for rule in parser.options(file_regex):
+                if parser.get(file_regex, rule) is not None:
+                    raise ParsingError('unexpected value for %r' % file_regex)
+                config[file_regex] = rule
+
         file_regexes = []
         rules = []
         for file_regex, rule in iteritems(config):
