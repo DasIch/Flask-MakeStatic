@@ -43,7 +43,6 @@ with the `.format()` string formatting syntax:
 In order to compile your assets you have to first create a :class:`MakeStatic`
 instance, this should be familiar if you have used other flask extensions::
 
-
     from flask import Flask
     from flask.ext.makestatic import MakeStatic
 
