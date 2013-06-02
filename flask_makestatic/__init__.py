@@ -75,7 +75,7 @@ class MakeStatic(object):
     def watch(self, sleep=0.1):
         """
         Starts a daemon thread that watches the `static` directory for changes
-        and calls :meth:`compile` if any occur.
+        and compiles the files that do change.
 
         Returns a :class:`ThreadedWatcher`, if you want to turn of watching you
         can call :meth:`ThreadedWatcher.stop`.
