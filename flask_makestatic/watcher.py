@@ -62,7 +62,7 @@ class Watcher(object):
     def stop(self):
         self._stopped = True
 
-    def watch(self):
+    def watch(self, sleep=0.1):
         while not self._stopped:
             with self._lock:
                 new_directories = []
@@ -116,12 +116,13 @@ class Watcher(object):
                                 self.directory_modified.send(directory)
                 for file in removed_files:
                     del self.files[file]
-                time.sleep(0.1)
+                time.sleep(sleep)
 
 
 class ThreadingMixin(object):
-    def watch(self):
-        thread = threading.Thread(target=super(ThreadingMixin, self).watch)
+    def watch(self, sleep=0.1):
+        thread = threading.Thread(target=super(ThreadingMixin, self).watch,
+                                  kwargs=dict(sleep=sleep))
         thread.daemon = True
         thread.start()
 

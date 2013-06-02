@@ -68,19 +68,22 @@ class MakeStatic(object):
         if match:
             return self.rulesets[match.lastindex - 1]
 
-    def watch(self):
+    def watch(self, sleep=0.1):
         """
         Starts a daemon thread that watches the `static` directory for changes
         and calls :meth:`compile` if any occur.
 
         Returns a :class:`ThreadedWatcher`, if you want to turn of watching you
         can call :meth:`ThreadedWatcher.stop`.
+
+        :param sleep: The amount of time in seconds that should be slept
+                      between checks for changes, may be ignored.
         """
         watcher = ThreadedWatcher()
         for signal in [watcher.file_added, watcher.file_modified, watcher.file_removed]:
             signal.connect(lambda f: self.compile)
         watcher.add_directory(self.app.static_folder)
-        watcher.watch()
+        watcher.watch(sleep=sleep)
         self.compile() # initial compile
         return watcher
 
