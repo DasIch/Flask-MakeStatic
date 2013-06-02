@@ -77,3 +77,9 @@ API
    :members:
 
 .. autoclass:: RuleMissing
+
+
+License
+-------
+
+.. include:: ../LICENSE.rst
