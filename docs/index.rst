@@ -34,7 +34,7 @@ and pass it your application::
     app = Flask(__name__)
     makestatic = MakeStatic(app)
 
-You can then call `:meth:`MakeStatic.watch` which will compile your assets if
+You can then call :meth:`MakeStatic.watch` which will compile your assets if
 any files in your `static` directory are changed. Typically you would do this
 before calling :meth:`flask.Flask.run` in a ``if __name__ == '__main__':``
 block::
