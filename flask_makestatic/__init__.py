@@ -114,13 +114,15 @@ class MakeStatic(object):
                 RuleMissing,
             )
         else:
+            static = os.path.join(self.app.static_folder, relative_filename)
+            static_base = os.path.splitext(static)[0]
             for rule in rules:
                 subprocess.check_call(
                     rule.format(
                         asset=filename,
-                        static=os.path.join(self.app.static_folder,
-                                            relative_filename),
-                        static_dir=self.app.static_folder
+                        static=static,
+                        static_dir=self.app.static_folder,
+                        static_base=static_base
                     ),
                     shell=True
                 )

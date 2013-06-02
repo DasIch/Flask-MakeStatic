@@ -87,6 +87,9 @@ class MakeStaticTestCase(unittest.TestCase):
 
                 self.assertRaises(NotFound, app.send_static_file, 'baz')
 
+                with closing(app.send_static_file('eggs.css')) as response:
+                    self.assertEqual(response.status_code, 200)
+
     def test_static_view(self):
         with self.make_static('working') as (app, make_static):
             client = app.test_client()
@@ -102,6 +105,9 @@ class MakeStaticTestCase(unittest.TestCase):
 
             with closing(client.get('/static/baz')) as response:
                 self.assertEqual(response.status_code, 404)
+
+            with closing(client.get('/static/eggs.css')) as response:
+                self.assertEqual(response.status_code, 200)
 
     def test_compile(self):
         app = Flask('working')
@@ -121,6 +127,9 @@ class MakeStaticTestCase(unittest.TestCase):
         with closing(client.get('/static/bar')) as response:
             self.assertEqual(response.status_code, 200)
             self.assertEqual(response.data, b'abc\ndef\n')
+
+        with closing(client.get('/static/eggs.css')) as response:
+            self.assertEqual(response.status_code, 200)
 
     def test_compile_warns_on_missing_rule(self):
         app = Flask('missing_rule')
