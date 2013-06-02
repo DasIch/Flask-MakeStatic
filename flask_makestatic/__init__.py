@@ -42,6 +42,10 @@ class MakeStatic(object):
         with self.app.open_resource('assets.cfg', 'r') as config_file:
             self.matcher, self.rulesets = self.parse_config(config_file)
 
+    @property
+    def assets_folder(self):
+        return os.path.join(self.app.root_path, 'assets')
+
     def parse_config(self, config_file):
         parser = RawConfigParser(allow_no_value=True)
         if PY2:
@@ -80,8 +84,8 @@ class MakeStatic(object):
                       between checks for changes, may be ignored.
         """
         watcher = ThreadedWatcher()
-        for signal in [watcher.file_added, watcher.file_modified, watcher.file_removed]:
-            signal.connect(lambda f: self.compile)
+        for signal in [watcher.file_added, watcher.file_modified]:
+            signal.connect(self.compile_asset)
         watcher.add_directory(self.app.static_folder)
         watcher.watch(sleep=sleep)
         self.compile() # initial compile
@@ -97,28 +101,29 @@ class MakeStatic(object):
         Emits a :class:`RuleMissing` warning for each file in `assets` for
         which no rule exists.
         """
-        assets = os.path.join(self.app.root_path, 'assets')
-        for root, _, files in os.walk(assets):
+        for root, _, files in os.walk(self.assets_folder):
             for file in files:
-                file = os.path.join(root, file)
-                relative_file = os.path.relpath(file, assets)
-                rules = self.get_rules(relative_file)
-                if rules is None:
-                    warnings.warn(
-                        'cannot find a rule for %s' % relative_file,
-                        RuleMissing,
-                    )
-                else:
-                    for rule in rules:
-                        subprocess.check_call(
-                            rule.format(
-                                asset=file,
-                                static=os.path.join(self.app.static_folder,
-                                                    relative_file),
-                                static_dir=self.app.static_folder
-                            ),
-                            shell=True
-                        )
+                self.compile_asset(os.path.join(root, file))
+
+    def compile_asset(self, filename):
+        relative_filename = os.path.relpath(filename, self.assets_folder)
+        rules = self.get_rules(relative_filename)
+        if rules is None:
+            warnings.warn(
+                'cannot find a rule for %s' % relative_filename,
+                RuleMissing,
+            )
+        else:
+            for rule in rules:
+                subprocess.check_call(
+                    rule.format(
+                        asset=filename,
+                        static=os.path.join(self.app.static_folder,
+                                            relative_filename),
+                        static_dir=self.app.static_folder
+                    ),
+                    shell=True
+                )
 
 
 __all__ = ['MakeStatic']
