@@ -10,19 +10,77 @@ import os
 import re
 import warnings
 import subprocess
-try:
-    from configparser import RawConfigParser, ParsingError
-except ImportError:
-    from ConfigParser import RawConfigParser, ParsingError
 
-from flask.ext.makestatic._compat import iteritems, PY2
 from flask.ext.makestatic.watcher import ThreadedWatcher
+
+
+_section_re = re.compile(r"\[(?P<file_re>[^\]]+)\]")
+_command_re = re.compile(r'\s*(?P<command>.*?)\s*$')
 
 
 class RuleMissing(Warning):
     """
     Warning that is emitted if a rule cannot be found.
     """
+
+
+class ParsingError(Exception):
+    def __init__(self, message, line, lineno):
+        Exception.__init__(self, message, line, lineno)
+        self.message = message
+        self.line = line
+        self.lineno = lineno
+
+
+class _ConfigParser(object):
+    def __init__(self, file):
+        self.file = file
+        self.lines = list(self.stripped_comments(enumerate(file, start=1)))
+
+    def stripped_comments(self, lines):
+        for lineno, line in lines:
+            if '#' in line:
+                comment_start = line.index('#')
+                line = line[:comment_start].rstrip()
+                if not line:
+                    continue
+            elif not line.strip():
+                continue
+            yield lineno, line
+
+    def next_line(self):
+        return self.lines.pop(0)
+
+    def parse_rule(self):
+        try:
+            lineno, line = self.next_line()
+        except IndexError:
+            return
+        match = _section_re.match(line)
+        if match is None:
+            raise ParsingError('expected new rule', line, lineno)
+        regex = match.group('file_re')
+        commands = []
+        insert = False
+        while True:
+            try:
+                lineno, line = self.next_line()
+            except IndexError:
+                break
+            if _section_re.match(line):
+                insert = True
+                break
+            commands.append(line.strip())
+        if insert:
+            self.lines.insert(0, (lineno, line))
+        return regex, commands
+
+    def parse(self):
+        while True:
+            result = self.parse_rule()
+            if result is None:
+                break
+            yield result
 
 
 class MakeStatic(object):
@@ -47,21 +105,9 @@ class MakeStatic(object):
         return os.path.join(self.app.root_path, 'assets')
 
     def parse_config(self, config_file):
-        parser = RawConfigParser(allow_no_value=True)
-        if PY2:
-            parser.readfp(config_file)
-        else:
-            parser.read_file(config_file)
-        config = {}
-        for file_regex in parser.sections():
-            for rule in parser.options(file_regex):
-                if parser.get(file_regex, rule) is not None:
-                    raise ParsingError('unexpected value for %r' % file_regex)
-                config.setdefault(file_regex, []).append(rule)
-
         file_regexes = []
         rulesets = []
-        for file_regex, rules in iteritems(config):
+        for file_regex, rules in _ConfigParser(config_file).parse():
             file_regexes.append('(%s)' % file_regex)
             rulesets.append(rules)
         matcher = re.compile('^%s$' % '|'.join(file_regexes)).match
