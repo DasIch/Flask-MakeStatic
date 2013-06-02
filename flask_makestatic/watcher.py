@@ -50,14 +50,18 @@ class Watcher(object):
         with self._lock:
             self.files[file] = os.stat(file).st_mtime
 
-    def add_directory(self, directory):
+    def add_directory(self, directory, ignore_contained=True):
         with self._lock:
-            self.directories[directory] = paths = self._listdir(directory)
+            paths = self._listdir(directory)
+            if ignore_contained:
+                self.directories[directory] = paths
+            else:
+                self.directories[directory] = set()
             for path in paths:
                 if os.path.isfile(path):
                     self.add_file(path)
                 elif os.path.isdir(path):
-                    self.add_directory(path)
+                    self.add_directory(path, ignore_contained=ignore_contained)
 
     def stop(self):
         self._stopped = True
@@ -94,7 +98,7 @@ class Watcher(object):
                                     self.directory_removed.send(path)
                         self.directories[directory] = current
                 for directory in new_directories:
-                    self.add_directory(directory)
+                    self.add_directory(directory, ignore_contained=False)
                 for directory in removed_directories:
                     del self.directories[directory]
                 removed_files = []
