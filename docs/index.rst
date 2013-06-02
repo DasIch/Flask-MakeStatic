@@ -25,38 +25,12 @@ copies the file to the `static` directory. ``{asset}`` will be replaced with
 the path to the file in the `assets` directory and ``{static}`` with the
 corresponding location within the `static` directory.
 
-In order for this to happen you have to create a :class:`MakeStatic` instance
-and pass it your application::
+As you can see the syntax is kind of like an ini file. You have sections which
+match files in your assets directory followed by one or more commands that are
+executed when a matched file is compiled.
 
-    from flask import Flask
-    from flask.ext.makestatic import MakeStatic
-
-    app = Flask(__name__)
-    makestatic = MakeStatic(app)
-
-You can then call :meth:`MakeStatic.watch` which will compile your assets if
-any files in your `static` directory are changed. Typically you would do this
-before calling :meth:`flask.Flask.run` in a ``if __name__ == '__main__':``
-block::
-
-    if __name__ == '__main__':
-        makestatic.watch()
-        app.run(debug=True)
-
-In production environments you want to compile your static files as part of the
-deployment process. This can be achieved by calling the
-:meth:`MakeStatic.compile` method, in the app context of the initialized
-application::
-
-    with app.app_context():
-        makestatic.compile()
-
-
-Command Substitutions
----------------------
-
-For the commands in each rule in `assets.cfg` several convenient substitutions
-are available which you can use with the`.format()` string formatting syntax.
+Within these commands several substitutions are available, which you can use
+with the `.format()` string formatting syntax:
 
 ============= =============================================================
 `asset`       The absolute path to matched asset.
@@ -65,6 +39,34 @@ are available which you can use with the`.format()` string formatting syntax.
 `static_dir`  The absolute path to the static directory.
 `static_base` Like `static` but without the file extension.
 ============= =============================================================
+
+In order to compile your assets you have to first create a :class:`MakeStatic`
+instance, this should be familiar if you have used other flask extensions::
+
+
+    from flask import Flask
+    from flask.ext.makestatic import MakeStatic
+
+    app = Flask(__name__)
+    makestatic = MakeStatic(app)
+
+First of all you are probably concerned about development. During development
+you do not want to manually recompile all the time, so what you should do is
+call :meth:`MakeStatic.watch` before calling :meth:`flask.Flask.run`::
+
+    if __name__ == '__main__':
+        makestatic.watch()
+        app.run(debug=True)
+
+This will compile your assets whenever a change is detected.
+
+In production environments using :meth:`MakeStatic.watch` is not a good idea
+because it starts a new thread to look for changes and has to compile all
+assets at least once. This costs performance and may unnecessarily compile your
+assets in environments using multiple workers.
+
+Instead what you want to do, is compile your assets during your deployment
+process. You can do this by calling :meth:`MakeStatic.compile`.
 
 
 API
