@@ -84,8 +84,20 @@ class MakeStatic(object):
                       between checks for changes, may be ignored.
         """
         watcher = ThreadedWatcher()
-        for signal in [watcher.file_added, watcher.file_modified]:
-            signal.connect(self.compile_asset)
+        @watcher.file_added.connect
+        def on_file_added(filename):
+            print(
+                u'Flask-MakeStatic: detected new asset %s, compiling' %
+                os.path.relpath(filename, self.assets_folder)
+            )
+            self.compile_asset(filename)
+        @watcher.file_modified.connect
+        def on_file_modified(filename):
+            print(
+                u'Flask-MakeStatic: detected change in %s, compiling' %
+                os.path.relpath(filename, self.assets_folder)
+            )
+            self.compile_asset(filename)
         watcher.add_directory(self.assets_folder)
         watcher.watch(sleep=sleep)
         self.compile() # initial compile

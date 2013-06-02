@@ -15,6 +15,13 @@ PY2 = sys.version_info[0] == 2
 if PY2:
     def iteritems(d):
         return d.iteritems()
+
+    from cStringIO import StringIO
 else:
     def iteritems(d):
         return d.items()
+
+    from io import StringIO
+
+
+__all__ = ['PY2', 'iteritems', 'StringIO']

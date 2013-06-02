@@ -14,6 +14,7 @@ from flask import Flask
 from werkzeug.exceptions import NotFound
 
 from flask.ext.makestatic import MakeStatic, RuleMissing
+from flask.ext.makestatic._compat import StringIO
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
@@ -21,8 +22,8 @@ TEST_APPS = os.path.join(os.path.dirname(__file__), 'test_apps')
 sys.path.insert(0, TEST_APPS)
 
 
-def get_temporary_filename():
-    filename = tempfile.mkstemp()[1]
+def get_temporary_filename(directory=None):
+    filename = tempfile.mkstemp(dir=directory)[1]
     @atexit.register
     def remove_file():
         try:
@@ -48,6 +49,16 @@ def bump_modification_time(path):
     os.utime(path, (stat.st_atime, stat.st_mtime + 1))
 
 
+@contextmanager
+def catch_stdout():
+    old_stdout = sys.stdout
+    sys.stdout = rv = StringIO()
+    try:
+        yield rv
+    finally:
+        sys.stdout = old_stdout
+
+
 class MakeStaticTestCase(unittest.TestCase):
     def tearDown(self):
         for test_app_dir in os.listdir(TEST_APPS):
@@ -65,7 +76,7 @@ class MakeStaticTestCase(unittest.TestCase):
     def make_static(self, import_name):
         app = Flask(import_name)
         make_static = MakeStatic(app)
-        watcher = make_static.watch()
+        watcher = make_static.watch(sleep=0.01)
         try:
             yield app, make_static
         finally:
@@ -90,6 +101,35 @@ class MakeStaticTestCase(unittest.TestCase):
                 with closing(app.send_static_file('eggs.css')) as response:
                     self.assertEqual(response.status_code, 200)
 
+                with catch_warnings(record=True): # silence RuleMissing warning
+                    with catch_stdout() as stdout:
+                        filename = os.path.basename(get_temporary_filename(
+                            directory=make_static.assets_folder
+                        ))
+                        time.sleep(0.05)
+
+                self.assertEqual(
+                    stdout.getvalue(),
+                    'Flask-MakeStatic: detected new asset %s, compiling\n' %
+                    filename
+                )
+
+                self.assertRaises(NotFound, app.send_static_file, filename)
+
+                with catch_stdout() as stdout:
+                    bump_modification_time(
+                        os.path.join(make_static.assets_folder, 'foo')
+                    )
+                    time.sleep(0.05)
+
+                self.assertEqual(
+                    stdout.getvalue(),
+                    'Flask-MakeStatic: detected change in foo, compiling\n'
+                )
+
+                with closing(app.send_static_file('foo')) as response:
+                    self.assertEqual(response.status_code, 200)
+
     def test_static_view(self):
         with self.make_static('working') as (app, make_static):
             client = app.test_client()
@@ -107,6 +147,36 @@ class MakeStaticTestCase(unittest.TestCase):
                 self.assertEqual(response.status_code, 404)
 
             with closing(client.get('/static/eggs.css')) as response:
+                self.assertEqual(response.status_code, 200)
+
+            with catch_warnings(record=True): # silence RuleMissing warning
+                with catch_stdout() as stdout:
+                    filename = os.path.basename(get_temporary_filename(
+                        directory=make_static.assets_folder
+                    ))
+                    time.sleep(0.05)
+
+            self.assertEqual(
+                stdout.getvalue(),
+                'Flask-MakeStatic: detected new asset %s, compiling\n' %
+                filename
+            )
+
+            with closing(client.get('/static/' + filename)) as response:
+                self.assertEqual(response.status_code, 404)
+
+            with catch_stdout() as stdout:
+                bump_modification_time(
+                    os.path.join(make_static.assets_folder, 'foo')
+                )
+                time.sleep(0.05)
+
+            self.assertEqual(
+                stdout.getvalue(),
+                'Flask-MakeStatic: detected change in foo, compiling\n'
+            )
+
+            with closing(client.get('/static/foo')) as response:
                 self.assertEqual(response.status_code, 200)
 
     def test_compile(self):
