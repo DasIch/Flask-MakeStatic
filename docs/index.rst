@@ -79,6 +79,12 @@ API
 .. autoclass:: RuleMissing
 
 
+Changelog
+---------
+
+.. include:: ../CHANGELOG.rst
+
+
 License
 -------
 
