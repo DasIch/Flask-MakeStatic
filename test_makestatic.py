@@ -135,14 +135,40 @@ class MakeStaticTestCase(unittest.TestCase):
 
 
 class WatcherTestCase(unittest.TestCase):
+    def assert_(self, **kwargs):
+        self.assertEqual(self.added_files, kwargs.pop('added_files', []))
+        del self.added_files[:]
+        self.assertEqual(self.modified_files, kwargs.pop('modified_files', []))
+        del self.modified_files[:]
+        self.assertEqual(self.removed_files, kwargs.pop('removed_files', []))
+        del self.removed_files[:]
+        self.assertEqual(self.added_directories, kwargs.pop('added_directories', []))
+        del self.added_directories[:]
+        self.assertEqual(self.modified_directories, kwargs.pop('modified_directories', []))
+        del self.modified_directories[:]
+        self.assertEqual(self.removed_directories, kwargs.pop('removed_directories', []))
+        del self.removed_directories[:]
+
+        if kwargs:
+            raise TypeError(
+                'unexpected keyword argument: %s' % kwargs.popitem()[0]
+            )
+
     def test(self):
         watcher = ThreadedWatcher()
-        added = []
-        modified = []
-        removed = []
-        watcher.file_added.connect(added.append)
-        watcher.file_modified.connect(modified.append)
-        watcher.file_removed.connect(removed.append)
+        self.added_files = []
+        self.modified_files = []
+        self.removed_files = []
+        self.added_directories = []
+        self.modified_directories = []
+        self.removed_directories = []
+        watcher.file_added.connect(self.added_files.append)
+        watcher.file_modified.connect(self.modified_files.append)
+        watcher.file_removed.connect(self.removed_files.append)
+        watcher.directory_added.connect(self.added_directories.append)
+        watcher.directory_modified.connect(self.modified_directories.append)
+        watcher.directory_removed.connect(self.removed_directories.append)
+
         directory = get_temporary_directory()
         watcher.add_directory(directory)
         watcher.watch()
@@ -150,24 +176,37 @@ class WatcherTestCase(unittest.TestCase):
         foo = os.path.join(directory, 'foo')
         open(foo, 'w').close()
         time.sleep(0.15) # reasonable amount of reaction time
-        self.assertEqual(added, [foo])
-        del added[:]
-        self.assertEqual(modified, [])
-        self.assertEqual(removed, [])
+        self.assert_(added_files=[foo], modified_directories=[directory])
 
         bump_modification_time(foo)
         time.sleep(0.15)
-        self.assertEqual(added, [])
-        self.assertEqual(modified, [foo])
-        del modified[:]
-        self.assertEqual(removed, [])
+        self.assert_(modified_files=[foo], modified_directories=[directory])
 
         os.remove(foo)
         time.sleep(0.15)
-        self.assertEqual(added, [])
-        self.assertEqual(modified, [])
-        self.assertEqual(removed, [foo])
-        del removed[:]
+        self.assert_(removed_files=[foo], modified_directories=[directory])
+
+        bar = os.path.join(directory, 'bar')
+        os.mkdir(bar)
+        time.sleep(0.15)
+        self.assert_(added_directories=[bar], modified_directories=[directory])
+
+        baz = os.path.join(bar, 'baz')
+        open(baz, 'w').close()
+        time.sleep(0.15)
+        self.assert_(added_files=[baz], modified_directories=[bar])
+
+        bump_modification_time(baz)
+        time.sleep(0.15)
+        self.assert_(modified_files=[baz], modified_directories=[bar])
+
+        os.remove(baz)
+        time.sleep(0.15)
+        self.assert_(removed_files=[baz], modified_directories=[bar])
+
+        os.rmdir(bar)
+        time.sleep(0.15)
+        self.assert_(removed_directories=[bar], modified_directories=[directory])
 
         watcher.stop()
         time.sleep(0.15)

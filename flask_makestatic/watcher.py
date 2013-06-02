@@ -37,6 +37,10 @@ class Watcher(object):
         self.file_modified = Signal()
         self.file_removed = Signal()
 
+        self.directory_added = Signal()
+        self.directory_modified = Signal()
+        self.directory_removed = Signal()
+
         self._stopped = False
 
     def _listdir(self, directory):
@@ -48,9 +52,12 @@ class Watcher(object):
 
     def add_directory(self, directory):
         with self._lock:
-            self.directories[directory] = files = self._listdir(directory)
-            for file in files:
-                self.add_file(file)
+            self.directories[directory] = paths = self._listdir(directory)
+            for path in paths:
+                if os.path.isfile(path):
+                    self.add_file(path)
+                elif os.path.isdir(path):
+                    self.add_directory(path)
 
     def stop(self):
         self._stopped = True
@@ -58,27 +65,57 @@ class Watcher(object):
     def watch(self):
         while not self._stopped:
             with self._lock:
-                for directory, seen_files in iteritems(self.directories):
-                    current_files = self._listdir(directory)
-                    for file in seen_files ^ current_files:
-                        if file in current_files:
-                            self.add_file(file)
-                            self.file_added.send(file)
+                new_directories = []
+                removed_directories = []
+                for directory, seen in iteritems(self.directories):
+                    try:
+                        current = self._listdir(directory)
+                    except OSError as error:
+                        if error.errno == errno.ENOENT:
+                            self.directory_removed.send(directory)
+                            removed_directories.append(directory)
                         else:
-                            self.file_removed.send(file)
-                            self.files.pop(file)
-                    self.directories[directory] = current_files
+                            raise
+                    else:
+                        for path in seen ^ current:
+                            self.directory_modified.send(directory)
+                            if path in current:
+                                if os.path.isfile(path):
+                                    self.add_file(path)
+                                    self.file_added.send(path)
+                                elif os.path.isdir(path):
+                                    new_directories.append(path)
+                                    self.directory_added.send(path)
+                            else:
+                                if os.path.isfile(path):
+                                    self.file_removed.send(path)
+                                    self.files.pop(path)
+                                elif os.path.isdir(path):
+                                    self.directory_removed.send(path)
+                        self.directories[directory] = current
+                for directory in new_directories:
+                    self.add_directory(directory)
+                for directory in removed_directories:
+                    del self.directories[directory]
+                removed_files = []
                 for file, last_known_modified_time in iteritems(self.files):
                     try:
                         modified_time = os.stat(file).st_mtime
                     except OSError as error:
                         if error.errno == errno.ENOENT:
                             self.file_removed.send(file)
-                        raise
+                            removed_files.append(file)
+                        else:
+                            raise
                     else:
                         if modified_time > last_known_modified_time:
                             self.files[file] = modified_time
                             self.file_modified.send(file)
+                            directory = os.path.dirname(file)
+                            if directory in self.directories:
+                                self.directory_modified.send(directory)
+                for file in removed_files:
+                    del self.files[file]
                 time.sleep(0.1)
 
 
