@@ -142,11 +142,14 @@ class WatcherTestCase(unittest.TestCase):
         del self.modified_files[:]
         self.assertEqual(self.removed_files, kwargs.pop('removed_files', []))
         del self.removed_files[:]
-        self.assertEqual(self.added_directories, kwargs.pop('added_directories', []))
+        self.assertEqual(self.added_directories,
+                         kwargs.pop('added_directories', []))
         del self.added_directories[:]
-        self.assertEqual(self.modified_directories, kwargs.pop('modified_directories', []))
+        self.assertEqual(self.modified_directories,
+                         kwargs.pop('modified_directories', []))
         del self.modified_directories[:]
-        self.assertEqual(self.removed_directories, kwargs.pop('removed_directories', []))
+        self.assertEqual(self.removed_directories,
+                         kwargs.pop('removed_directories', []))
         del self.removed_directories[:]
 
         if kwargs:
@@ -206,7 +209,8 @@ class WatcherTestCase(unittest.TestCase):
 
         os.rmdir(bar)
         time.sleep(0.15)
-        self.assert_(removed_directories=[bar], modified_directories=[directory])
+        self.assert_(removed_directories=[bar],
+                     modified_directories=[directory])
 
         watcher.stop()
         time.sleep(0.15)
