@@ -23,7 +23,7 @@ The simplest possible `assets.cfg` file would look like this::
 This defines a regular expression ``.*`` which matches any file in assets and
 copies the file to the `static` directory. ``{asset}`` will be replaced with
 the path to the file in the `assets` directory and ``{static}`` with the
-corresponding location within the `static` directory
+corresponding location within the `static` directory.
 
 In order for this to happen you have to create a :class:`MakeStatic` instance
 and pass it your application::
@@ -34,14 +34,17 @@ and pass it your application::
     app = Flask(__name__)
     makestatic = MakeStatic(app)
 
-:class:`MakeStatic` wraps and replaces :meth:`~flask.Flask.send_static_file`
-and the static view of the flask application, to seamlessly compile assets when
-a request to a static file is made.  In order to avoid unnecessary
-compilations, compiled assets are cached in the `static` directory.
+You can then call `:meth:`MakeStatic.watch` which will compile your assets if
+any files in your `static` directory are changed. Typically you would do this
+before calling :meth:`flask.Flask.run` in a ``if __name__ == '__main__':``
+block::
 
-In production environments you do not usually let flask serve static files nor
-should you. In this scenario you want to compile your static files as part of
-the deployment process. This can be achieved by calling the
+    if __name__ == '__main__':
+        makestatic.watch()
+        app.run(debug=True)
+
+In production environments you want to compile your static files as part of the
+deployment process. This can be achieved by calling the
 :meth:`MakeStatic.compile` method, in the app context of the initialized
 application::
 

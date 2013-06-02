@@ -8,76 +8,15 @@
 """
 import os
 import re
-import errno
 import warnings
 import subprocess
-from functools import wraps
 try:
     from configparser import RawConfigParser, ParsingError
 except ImportError:
     from ConfigParser import RawConfigParser, ParsingError
 
-from flask import current_app
 from flask.ext.makestatic._compat import iteritems, PY2
-
-
-def get_rule(filename):
-    try:
-        matcher, rules = current_app.extensions['MakeStatic']
-    except KeyError:
-        raise RuntimeError('current application not initialized')
-    match = matcher(filename)
-    if match:
-        return rules[match.lastindex - 1]
-
-
-def get_static_path(filename):
-    return os.path.join(current_app.static_folder, filename)
-
-
-def get_assets_path():
-    return os.path.join(current_app.root_path, 'assets')
-
-
-def get_asset_path(filename):
-    return os.path.join(get_assets_path(), filename)
-
-
-def compile(rules, asset, static):
-    for rule in rules:
-        subprocess.check_call(rule.format(asset=asset, static=static,
-                                          static_dir=current_app.static_folder),
-                              shell=True)
-
-
-def is_newer(checked, against):
-    try:
-        against = os.stat(against).st_mtime
-    except OSError as error:
-        if error.errno == errno.ENOENT:
-            against = -1
-        else:
-            raise
-    return os.stat(checked).st_mtime > against
-
-
-def wrap_send_static_file(app):
-    @wraps(app.send_static_file.__func__)
-    def send_static_file(self, filename):
-        rule = get_rule(filename)
-        if rule is not None:
-            static = get_static_path(filename)
-            asset = get_asset_path(filename)
-            try:
-                newer = is_newer(asset, static)
-            except OSError:
-                pass # asset does not exist
-            else:
-                if newer:
-                    compile(rule, asset, static)
-        return super(self.__class__, self).send_static_file(filename)
-    app.send_static_file = send_static_file.__get__(app, app.__class__)
-    app.view_functions['static'] = app.send_static_file
+from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
 class RuleMissing(Warning):
@@ -94,37 +33,14 @@ class MakeStatic(object):
         app = Flask(__name__)
         make_static = MakeStatic(app)
 
-    or by creating an instance and calling :meth:`init_app` later::
-
-        make_static = MakeStatic()
-
-        # somewhere else in the application
-        app = Flask(__name__)
-        make_static.init_app(app)
-
     Once initialized :class:`MakeStatic` will parse the `assets.cfg`
-    configuration file corresponding to the initialized application and
-    replaces :meth:`flask.Flask.send_static_file` with a version that compiles
-    assets on demand.
-
-    This is very useful during development and may be a feasable approach even
-    on low traffic sites. In production you probably do not want to compile
-    assets on demand and instead compile them all at once as part of
-    deployment, to do so simply call :meth:`compile`.
+    configuration file corresponding to the initialized application.
     """
-    def __init__(self, app=None):
-        if app is not None:
-            self.init_app(app)
+    def __init__(self, app):
+        self.app = app
 
-    def init_app(self, app):
-        """
-        Initializes the given :class:`~flask.Flask` instance. Use this if you
-        want to use the :class:`MakeStatic` instance before creating a flask
-        application.
-        """
-        with app.open_resource('assets.cfg', 'r') as config_file:
-            app.extensions['MakeStatic'] = self.parse_config(config_file)
-        wrap_send_static_file(app)
+        with self.app.open_resource('assets.cfg', 'r') as config_file:
+            self.matcher, self.rulesets = self.parse_config(config_file)
 
     def parse_config(self, config_file):
         parser = RawConfigParser(allow_no_value=True)
@@ -147,6 +63,27 @@ class MakeStatic(object):
         matcher = re.compile('^%s$' % '|'.join(file_regexes)).match
         return matcher, rulesets
 
+    def get_rules(self, filename):
+        match = self.matcher(filename)
+        if match:
+            return self.rulesets[match.lastindex - 1]
+
+    def watch(self):
+        """
+        Starts a daemon thread that watches the `static` directory for changes
+        and calls :meth:`compile` if any occur.
+
+        Returns a :class:`ThreadedWatcher`, if you want to turn of watching you
+        can call :meth:`ThreadedWatcher.stop`.
+        """
+        watcher = ThreadedWatcher()
+        for signal in [watcher.file_added, watcher.file_modified, watcher.file_removed]:
+            signal.connect(lambda f: self.compile)
+        watcher.add_directory(self.app.static_folder)
+        watcher.watch()
+        self.compile() # initial compile
+        return watcher
+
     def compile(self):
         """
         Compiles all assets to static files in one go.
@@ -157,19 +94,28 @@ class MakeStatic(object):
         Emits a :class:`RuleMissing` warning for each file in `assets` for
         which no rule exists.
         """
-        assets = get_assets_path()
+        assets = os.path.join(self.app.root_path, 'assets')
         for root, _, files in os.walk(assets):
             for file in files:
                 file = os.path.join(root, file)
                 relative_file = os.path.relpath(file, assets)
-                rule = get_rule(relative_file)
-                if rule is None:
+                rules = self.get_rules(relative_file)
+                if rules is None:
                     warnings.warn(
                         'cannot find a rule for %s' % relative_file,
                         RuleMissing,
                     )
                 else:
-                    compile(rule, file, get_static_path(relative_file))
+                    for rule in rules:
+                        subprocess.check_call(
+                            rule.format(
+                                asset=file,
+                                static=os.path.join(self.app.static_folder,
+                                                    relative_file),
+                                static_dir=self.app.static_folder
+                            ),
+                            shell=True
+                        )
 
 
 __all__ = ['MakeStatic']
