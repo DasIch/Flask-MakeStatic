@@ -52,6 +52,21 @@ application::
         makestatic.compile()
 
 
+Command Substitutions
+---------------------
+
+For the commands in each rule in `assets.cfg` several convenient substitutions
+are available which you can use with the`.format()` string formatting syntax.
+
+============= =============================================================
+`asset`       The absolute path to matched asset.
+`static`      The absolute path to the corresponding location in the static
+              directory.
+`static_dir`  The absolute path to the static directory.
+`static_base` Like `static` but without the file extension.
+============= =============================================================
+
+
 API
 ---
 
