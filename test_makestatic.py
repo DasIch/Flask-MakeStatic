@@ -174,46 +174,46 @@ class WatcherTestCase(unittest.TestCase):
 
         directory = get_temporary_directory()
         watcher.add_directory(directory)
-        watcher.watch()
+        watcher.watch(sleep=0.01)
 
         foo = os.path.join(directory, 'foo')
         open(foo, 'w').close()
-        time.sleep(0.15) # reasonable amount of reaction time
+        time.sleep(0.05) # reasonable amount of reaction time
         self.assert_(added_files=[foo], modified_directories=[directory])
 
         bump_modification_time(foo)
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assert_(modified_files=[foo], modified_directories=[directory])
 
         os.remove(foo)
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assert_(removed_files=[foo], modified_directories=[directory])
 
         bar = os.path.join(directory, 'bar')
         os.mkdir(bar)
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assert_(added_directories=[bar], modified_directories=[directory])
 
         baz = os.path.join(bar, 'baz')
         open(baz, 'w').close()
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assert_(added_files=[baz], modified_directories=[bar])
 
         bump_modification_time(baz)
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assert_(modified_files=[baz], modified_directories=[bar])
 
         os.remove(baz)
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assert_(removed_files=[baz], modified_directories=[bar])
 
         os.rmdir(bar)
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assert_(removed_directories=[bar],
                      modified_directories=[directory])
 
         watcher.stop()
-        time.sleep(0.15)
+        time.sleep(0.05)
         self.assertEqual(threading.active_count(), 1)
 
 
