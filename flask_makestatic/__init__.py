@@ -80,9 +80,19 @@ class MakeStatic(object):
         Returns a :class:`ThreadedWatcher`, if you want to turn of watching you
         can call :meth:`ThreadedWatcher.stop`.
 
+        When run in a process started by the reloader, this does nothing to
+        prevent the start of an unnecessary second watcher.
+
         :param sleep: The amount of time in seconds that should be slept
                       between checks for changes, may be ignored.
         """
+        if os.environ.get('WERKZEUG_RUN_MAIN') == 'true':
+            # We are running in the Werkzeug reloader, which runs the setup
+            # code twice (don't ask) which means we are called twice. This
+            # means that the Watcher is also created twice and we compile all
+            # assets twice. That is annoying to say the least, so we just
+            # return and do nothing.
+            return
         watcher = ThreadedWatcher()
         @watcher.file_added.connect
         def on_file_added(filename):
