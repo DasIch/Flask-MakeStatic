@@ -11,6 +11,8 @@ import time
 import errno
 import threading
 
+from flask.ext.makestatic._compat import iteritems
+
 
 class Signal(object):
     def __init__(self):
@@ -56,7 +58,7 @@ class Watcher(object):
     def watch(self):
         while not self._stopped:
             with self._lock:
-                for directory, seen_files in self.directories.iteritems():
+                for directory, seen_files in iteritems(self.directories):
                     current_files = self._listdir(directory)
                     for file in seen_files ^ current_files:
                         if file in current_files:
@@ -66,7 +68,7 @@ class Watcher(object):
                             self.file_removed.send(file)
                             self.files.pop(file)
                     self.directories[directory] = current_files
-                for file, last_known_modified_time in self.files.iteritems():
+                for file, last_known_modified_time in iteritems(self.files):
                     try:
                         modified_time = os.stat(file).st_mtime
                     except OSError as error:
