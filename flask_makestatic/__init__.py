@@ -86,7 +86,7 @@ class MakeStatic(object):
         watcher = ThreadedWatcher()
         for signal in [watcher.file_added, watcher.file_modified]:
             signal.connect(self.compile_asset)
-        watcher.add_directory(self.app.static_folder)
+        watcher.add_directory(self.assets_folder)
         watcher.watch(sleep=sleep)
         self.compile() # initial compile
         return watcher
