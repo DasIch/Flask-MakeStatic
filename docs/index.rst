@@ -12,7 +12,7 @@ of static files such as sass_ or coffeescript_ files.
 
 In order to use it you simply create an `assets` directory and an `assets.cfg`
 file in the same directory as your `static` directory. `assets` should contain
-all files that require compilation and `assets.cfg` specified how the files in
+all files that require compilation and `assets.cfg` specifies how the files in
 `assets` should be compiled.
 
 The simplest possible `assets.cfg` file would look like this::
