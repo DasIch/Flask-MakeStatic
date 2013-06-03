@@ -14,6 +14,10 @@ import subprocess
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
+__version__ = '0.1.0-dev'
+__version_info__ = (0, 1, 0)
+
+
 _section_re = re.compile(r"\[(?P<file_re>[^\]]+)\]")
 _command_re = re.compile(r'\s*(?P<command>.*?)\s*$')
 

@@ -4,6 +4,19 @@ import os
 from setuptools import setup
 
 
+def get_version():
+    # We can't import flask.ext.makestatic because that would require all
+    # dependencies to be installed.
+    init_path = os.path.join(
+        os.path.dirname(__file__), 'flask_makestatic', '__init__.py'
+    )
+    with open(init_path) as init_file:
+        for line in init_file:
+            if line.startswith('__version__'):
+                return line.split('=')[1].replace("'", '').strip()
+        raise ValueError('__version__ not found in %s' % init_path)
+
+
 def get_long_description():
     with open(os.path.join(os.path.dirname(__file__), 'README.rst')) as readme:
         return readme.read()
@@ -11,7 +24,7 @@ def get_long_description():
 
 setup(
     name='Flask-MakeStatic',
-    version='0.1.0-dev',
+    version=get_version(),
     url='https://github.com/DasIch/Flask-MakeStatic',
     license='BSD',
     author='Daniel Neuhäuser',
