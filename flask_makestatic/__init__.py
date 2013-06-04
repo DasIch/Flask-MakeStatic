@@ -14,7 +14,7 @@ import subprocess
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
-__version__ = '0.1.1-dev'
+__version__ = '0.1.1'
 __version_info__ = (0, 1, 1)
 
 
