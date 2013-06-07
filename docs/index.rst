@@ -25,6 +25,10 @@ copies the file to the `static` directory. ``{asset}`` will be replaced with
 the path to the file in the `assets` directory and ``{static}`` with the
 corresponding location within the `static` directory.
 
+Since 0.2.0 you can also use globbing instead of regular expressions for your
+filename patterns, if you set the `MAKESTATIC_FILEPATTERN_FORMAT` configuration
+variable in your application configuration to ``'globbing'``.
+
 As you can see the syntax is kind of like an ini file. You have sections which
 match files in your assets directory followed by one or more commands that are
 executed when a matched file is compiled.

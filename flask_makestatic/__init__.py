@@ -10,6 +10,7 @@ import os
 import re
 import warnings
 import subprocess
+from fnmatch import fnmatch
 from itertools import starmap, repeat, takewhile
 
 from flask.ext.makestatic.watcher import ThreadedWatcher
@@ -46,8 +47,9 @@ class ParsingError(Exception):
 
 
 class _ConfigParser(object):
-    def __init__(self, file):
+    def __init__(self, file, filepattern_format):
         self.file = file
+        self.filepattern_format = filepattern_format
         self.lines = list(self.stripped_comments(enumerate(file, start=1)))
 
     def stripped_comments(self, lines):
@@ -95,6 +97,13 @@ class _ConfigParser(object):
         )
 
     def create_get_commands(self, rules):
+        if self.filepattern_format == 'regex':
+            return self._create_get_commands_regex(rules)
+        elif self.filepattern_format == 'globbing':
+            return self._create_get_commands_globbing(rules)
+        raise NotImplementedError(self.filepattern_format)
+
+    def _create_get_commands_regex(self, rules):
         file_regex = []
         commandsets = []
         if rules:
@@ -109,6 +118,13 @@ class _ConfigParser(object):
             match = matcher(filename)
             if match:
                 return commandsets[match.lastindex - 1]
+        return get_commands
+
+    def _create_get_commands_globbing(self, rules):
+        def get_commands(filename):
+            for pattern, commands in rules:
+                if fnmatch(filename, pattern):
+                    return commands
         return get_commands
 
 
@@ -127,7 +143,12 @@ class MakeStatic(object):
         self.app = app
 
         with self.app.open_resource('assets.cfg', 'r') as config_file:
-            self.get_commands = _ConfigParser(config_file).parse()
+            self.get_commands = _ConfigParser(
+                config_file,
+                self.app.config.setdefault(
+                    'MAKESTATIC_FILEPATTERN_FORMAT', 'regex'
+                )
+            ).parse()
 
     @property
     def assets_folder(self):
