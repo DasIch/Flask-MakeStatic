@@ -10,6 +10,7 @@ import os
 import re
 import warnings
 import subprocess
+from itertools import starmap, repeat, takewhile
 
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
@@ -20,6 +21,14 @@ __version_info__ = (0, 2, 0)
 
 _section_re = re.compile(r"\[(?P<file_re>[^\]]+)\]")
 _command_re = re.compile(r'\s*(?P<command>.*?)\s*$')
+
+
+def repeatfunc(func):
+    return starmap(func, repeat(()))
+
+
+def unzip(zipped):
+    return map(list, zip(*zipped))
 
 
 class RuleMissing(Warning):
@@ -80,11 +89,27 @@ class _ConfigParser(object):
         return regex, commands
 
     def parse(self):
-        while True:
-            result = self.parse_rule()
-            if result is None:
-                break
-            yield result
+        return self.create_get_commands(
+            list(takewhile(lambda rule: rule is not None,
+                           repeatfunc(self.parse_rule)))
+        )
+
+    def create_get_commands(self, rules):
+        file_regex = []
+        commandsets = []
+        if rules:
+            file_regex, commandsets = unzip(rules)
+        matcher = re.compile(
+            '^%s$' % '|'.join(
+                '(%s)' % filename_description
+                for filename_description in file_regex
+            )
+        ).match
+        def get_commands(filename):
+            match = matcher(filename)
+            if match:
+                return commandsets[match.lastindex - 1]
+        return get_commands
 
 
 class MakeStatic(object):
@@ -102,25 +127,11 @@ class MakeStatic(object):
         self.app = app
 
         with self.app.open_resource('assets.cfg', 'r') as config_file:
-            self.matcher, self.rulesets = self.parse_config(config_file)
+            self.get_commands = _ConfigParser(config_file).parse()
 
     @property
     def assets_folder(self):
         return os.path.join(self.app.root_path, 'assets')
-
-    def parse_config(self, config_file):
-        file_regexes = []
-        rulesets = []
-        for file_regex, rules in _ConfigParser(config_file).parse():
-            file_regexes.append('(%s)' % file_regex)
-            rulesets.append(rules)
-        matcher = re.compile('^%s$' % '|'.join(file_regexes)).match
-        return matcher, rulesets
-
-    def get_rules(self, filename):
-        match = self.matcher(filename)
-        if match:
-            return self.rulesets[match.lastindex - 1]
 
     def watch(self, sleep=0.1):
         """
@@ -179,8 +190,8 @@ class MakeStatic(object):
 
     def compile_asset(self, filename):
         relative_filename = os.path.relpath(filename, self.assets_folder)
-        rules = self.get_rules(relative_filename)
-        if rules is None:
+        commands = self.get_commands(relative_filename)
+        if commands is None:
             warnings.warn(
                 'cannot find a rule for %s' % relative_filename,
                 RuleMissing,
@@ -188,9 +199,9 @@ class MakeStatic(object):
         else:
             static = os.path.join(self.app.static_folder, relative_filename)
             static_base = os.path.splitext(static)[0]
-            for rule in rules:
+            for command in commands:
                 subprocess.check_call(
-                    rule.format(
+                    command.format(
                         asset=filename,
                         static=static,
                         static_dir=self.app.static_folder,
