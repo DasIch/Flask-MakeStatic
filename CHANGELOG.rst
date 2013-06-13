@@ -1,8 +1,6 @@
 Version 0.2.0
 `````````````
 
-*In development*
-
 - Added support for globbing instead of regular expressions, using the
   `MAKESTATIC_FILEPATTERN_FORMAT` configuration variable.
 - Increased lowest supported version of Flask to 0.10, which is the first
