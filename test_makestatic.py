@@ -382,8 +382,7 @@ class MakeStaticTestCase(unittest.TestCase):
         app = Flask('working')
         make_static = MakeStatic()
         make_static.init_app(app)
-        with self.assertRaises(RuntimeError):
-            make_static.compile()
+        self.assertRaises(RuntimeError, make_static.compile)
 
 
 class WatcherTestCase(unittest.TestCase):
