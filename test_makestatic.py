@@ -84,72 +84,141 @@ class MakeStaticTestCase(unittest.TestCase):
         finally:
             watcher.stop()
 
+    @contextmanager
+    def make_static_in_app_context(self, import_name, config=None):
+        app = Flask(import_name)
+        if config is not None:
+            app.config.update(config)
+        make_static = MakeStatic()
+        make_static.init_app(app)
+        with app.app_context():
+            watcher = make_static.watch(sleep=0.01)
+            try:
+                yield app, make_static
+            finally:
+                watcher.stop()
+
+    def get_watcher_contexts(self, import_name, config=None):
+        yield self.make_static(import_name, config)
+        yield self.make_static_in_app_context(import_name, config)
+
     def test_send_static_file(self):
-        with self.make_static('working') as (app, make_static):
-            with app.test_request_context():
-                with closing(app.send_static_file('foo')) as response:
-                    self.assertEqual(response.status_code, 200)
+        for context in self.get_watcher_contexts('working'):
+            with context as (app, make_static):
+                with app.test_request_context():
+                    with closing(app.send_static_file('foo')) as response:
+                        self.assertEqual(response.status_code, 200)
 
-                with closing(app.send_static_file('spam')) as response:
-                    self.assertEqual(response.status_code, 200)
+                    with closing(app.send_static_file('spam')) as response:
+                        self.assertEqual(response.status_code, 200)
 
-                with closing(app.send_static_file('bar')) as response:
-                    self.assertEqual(response.status_code, 200)
-                    response.direct_passthrough = False
-                    self.assertEqual(response.data, b'abc\ndef\n')
+                    with closing(app.send_static_file('bar')) as response:
+                        self.assertEqual(response.status_code, 200)
+                        response.direct_passthrough = False
+                        self.assertEqual(response.data, b'abc\ndef\n')
 
-                self.assertRaises(NotFound, app.send_static_file, 'baz')
+                    self.assertRaises(NotFound, app.send_static_file, 'baz')
 
-                with closing(app.send_static_file('eggs.css')) as response:
-                    self.assertEqual(response.status_code, 200)
+                    with closing(app.send_static_file('eggs.css')) as response:
+                        self.assertEqual(response.status_code, 200)
 
-                with catch_warnings(record=True): # silence RuleMissing warning
+                    with catch_warnings(record=True): # silence RuleMissing warning
+                        with catch_stdout() as stdout:
+                            filename = os.path.basename(get_temporary_filename(
+                                directory=make_static.assets_folder
+                            ))
+                            time.sleep(0.05)
+
+                    self.assertEqual(
+                        stdout.getvalue(),
+                        'Flask-MakeStatic: detected new asset %s, compiling\n' %
+                        filename
+                    )
+
+                    self.assertRaises(NotFound, app.send_static_file, filename)
+
                     with catch_stdout() as stdout:
-                        filename = os.path.basename(get_temporary_filename(
-                            directory=make_static.assets_folder
-                        ))
+                        bump_modification_time(
+                            os.path.join(make_static.assets_folder, 'foo')
+                        )
                         time.sleep(0.05)
 
-                self.assertEqual(
-                    stdout.getvalue(),
-                    'Flask-MakeStatic: detected new asset %s, compiling\n' %
-                    filename
-                )
-
-                self.assertRaises(NotFound, app.send_static_file, filename)
-
-                with catch_stdout() as stdout:
-                    bump_modification_time(
-                        os.path.join(make_static.assets_folder, 'foo')
+                    self.assertEqual(
+                        stdout.getvalue(),
+                        'Flask-MakeStatic: detected change in foo, compiling\n'
                     )
-                    time.sleep(0.05)
 
-                self.assertEqual(
-                    stdout.getvalue(),
-                    'Flask-MakeStatic: detected change in foo, compiling\n'
-                )
-
-                with closing(app.send_static_file('foo')) as response:
-                    self.assertEqual(response.status_code, 200)
+                    with closing(app.send_static_file('foo')) as response:
+                        self.assertEqual(response.status_code, 200)
 
     def test_send_static_file_globbing(self):
         config = {'MAKESTATIC_FILEPATTERN_FORMAT': 'globbing'}
-        with self.make_static('working_globbing', config) as (app, make_static):
-            with app.test_request_context():
-                with closing(app.send_static_file('foo')) as response:
+        for context in self.get_watcher_contexts('working_globbing', config):
+            with context as (app, make_static):
+                with app.test_request_context():
+                    with closing(app.send_static_file('foo')) as response:
+                        self.assertEqual(response.status_code, 200)
+
+                    with closing(app.send_static_file('spam')) as response:
+                        self.assertEqual(response.status_code, 200)
+
+                    with closing(app.send_static_file('bar')) as response:
+                        self.assertEqual(response.status_code, 200)
+                        response.direct_passthrough = False
+                        self.assertEqual(response.data, b'abc\ndef\n')
+
+                    self.assertRaises(NotFound, app.send_static_file, 'baz')
+
+                    with closing(app.send_static_file('eggs.css')) as response:
+                        self.assertEqual(response.status_code, 200)
+
+                    with catch_warnings(record=True): # silence RuleMissing warning
+                        with catch_stdout() as stdout:
+                            filename = os.path.basename(get_temporary_filename(
+                                directory=make_static.assets_folder
+                            ))
+                            time.sleep(0.05)
+
+                    self.assertEqual(
+                        stdout.getvalue(),
+                        'Flask-MakeStatic: detected new asset %s, compiling\n' %
+                        filename
+                    )
+
+                    self.assertRaises(NotFound, app.send_static_file, filename)
+
+                    with catch_stdout() as stdout:
+                        bump_modification_time(
+                            os.path.join(make_static.assets_folder, 'foo')
+                        )
+                        time.sleep(0.05)
+
+                    self.assertEqual(
+                        stdout.getvalue(),
+                        'Flask-MakeStatic: detected change in foo, compiling\n'
+                    )
+
+                    with closing(app.send_static_file('foo')) as response:
+                        self.assertEqual(response.status_code, 200)
+
+    def test_static_view(self):
+        for context in self.get_watcher_contexts('working'):
+            with context as (app, make_static):
+                client = app.test_client()
+                with closing(client.get('/static/foo')) as response:
                     self.assertEqual(response.status_code, 200)
 
-                with closing(app.send_static_file('spam')) as response:
+                with closing(client.get('/static/spam')) as response:
                     self.assertEqual(response.status_code, 200)
 
-                with closing(app.send_static_file('bar')) as response:
+                with closing(client.get('/static/bar')) as response:
                     self.assertEqual(response.status_code, 200)
-                    response.direct_passthrough = False
                     self.assertEqual(response.data, b'abc\ndef\n')
 
-                self.assertRaises(NotFound, app.send_static_file, 'baz')
+                with closing(client.get('/static/baz')) as response:
+                    self.assertEqual(response.status_code, 404)
 
-                with closing(app.send_static_file('eggs.css')) as response:
+                with closing(client.get('/static/eggs.css')) as response:
                     self.assertEqual(response.status_code, 200)
 
                 with catch_warnings(record=True): # silence RuleMissing warning
@@ -165,7 +234,8 @@ class MakeStaticTestCase(unittest.TestCase):
                     filename
                 )
 
-                self.assertRaises(NotFound, app.send_static_file, filename)
+                with closing(client.get('/static/' + filename)) as response:
+                    self.assertEqual(response.status_code, 404)
 
                 with catch_stdout() as stdout:
                     bump_modification_time(
@@ -178,111 +248,85 @@ class MakeStaticTestCase(unittest.TestCase):
                     'Flask-MakeStatic: detected change in foo, compiling\n'
                 )
 
-                with closing(app.send_static_file('foo')) as response:
+                with closing(client.get('/static/foo')) as response:
                     self.assertEqual(response.status_code, 200)
-
-    def test_static_view(self):
-        with self.make_static('working') as (app, make_static):
-            client = app.test_client()
-            with closing(client.get('/static/foo')) as response:
-                self.assertEqual(response.status_code, 200)
-
-            with closing(client.get('/static/spam')) as response:
-                self.assertEqual(response.status_code, 200)
-
-            with closing(client.get('/static/bar')) as response:
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.data, b'abc\ndef\n')
-
-            with closing(client.get('/static/baz')) as response:
-                self.assertEqual(response.status_code, 404)
-
-            with closing(client.get('/static/eggs.css')) as response:
-                self.assertEqual(response.status_code, 200)
-
-            with catch_warnings(record=True): # silence RuleMissing warning
-                with catch_stdout() as stdout:
-                    filename = os.path.basename(get_temporary_filename(
-                        directory=make_static.assets_folder
-                    ))
-                    time.sleep(0.05)
-
-            self.assertEqual(
-                stdout.getvalue(),
-                'Flask-MakeStatic: detected new asset %s, compiling\n' %
-                filename
-            )
-
-            with closing(client.get('/static/' + filename)) as response:
-                self.assertEqual(response.status_code, 404)
-
-            with catch_stdout() as stdout:
-                bump_modification_time(
-                    os.path.join(make_static.assets_folder, 'foo')
-                )
-                time.sleep(0.05)
-
-            self.assertEqual(
-                stdout.getvalue(),
-                'Flask-MakeStatic: detected change in foo, compiling\n'
-            )
-
-            with closing(client.get('/static/foo')) as response:
-                self.assertEqual(response.status_code, 200)
 
     def test_static_view_globbing(self):
         config = {'MAKESTATIC_FILEPATTERN_FORMAT': 'globbing'}
-        with self.make_static('working_globbing', config) as (app, make_static):
-            client = app.test_client()
-            with closing(client.get('/static/foo')) as response:
-                self.assertEqual(response.status_code, 200)
+        for context in self.get_watcher_contexts('working_globbing', config):
+            with context as (app, make_static):
+                client = app.test_client()
+                with closing(client.get('/static/foo')) as response:
+                    self.assertEqual(response.status_code, 200)
 
-            with closing(client.get('/static/spam')) as response:
-                self.assertEqual(response.status_code, 200)
+                with closing(client.get('/static/spam')) as response:
+                    self.assertEqual(response.status_code, 200)
 
-            with closing(client.get('/static/bar')) as response:
-                self.assertEqual(response.status_code, 200)
-                self.assertEqual(response.data, b'abc\ndef\n')
+                with closing(client.get('/static/bar')) as response:
+                    self.assertEqual(response.status_code, 200)
+                    self.assertEqual(response.data, b'abc\ndef\n')
 
-            with closing(client.get('/static/baz')) as response:
-                self.assertEqual(response.status_code, 404)
+                with closing(client.get('/static/baz')) as response:
+                    self.assertEqual(response.status_code, 404)
 
-            with closing(client.get('/static/eggs.css')) as response:
-                self.assertEqual(response.status_code, 200)
+                with closing(client.get('/static/eggs.css')) as response:
+                    self.assertEqual(response.status_code, 200)
 
-            with catch_warnings(record=True): # silence RuleMissing warning
+                with catch_warnings(record=True): # silence RuleMissing warning
+                    with catch_stdout() as stdout:
+                        filename = os.path.basename(get_temporary_filename(
+                            directory=make_static.assets_folder
+                        ))
+                        time.sleep(0.05)
+
+                self.assertEqual(
+                    stdout.getvalue(),
+                    'Flask-MakeStatic: detected new asset %s, compiling\n' %
+                    filename
+                )
+
+                with closing(client.get('/static/' + filename)) as response:
+                    self.assertEqual(response.status_code, 404)
+
                 with catch_stdout() as stdout:
-                    filename = os.path.basename(get_temporary_filename(
-                        directory=make_static.assets_folder
-                    ))
+                    bump_modification_time(
+                        os.path.join(make_static.assets_folder, 'foo')
+                    )
                     time.sleep(0.05)
 
-            self.assertEqual(
-                stdout.getvalue(),
-                'Flask-MakeStatic: detected new asset %s, compiling\n' %
-                filename
-            )
-
-            with closing(client.get('/static/' + filename)) as response:
-                self.assertEqual(response.status_code, 404)
-
-            with catch_stdout() as stdout:
-                bump_modification_time(
-                    os.path.join(make_static.assets_folder, 'foo')
+                self.assertEqual(
+                    stdout.getvalue(),
+                    'Flask-MakeStatic: detected change in foo, compiling\n'
                 )
-                time.sleep(0.05)
 
-            self.assertEqual(
-                stdout.getvalue(),
-                'Flask-MakeStatic: detected change in foo, compiling\n'
-            )
-
-            with closing(client.get('/static/foo')) as response:
-                self.assertEqual(response.status_code, 200)
+                with closing(client.get('/static/foo')) as response:
+                    self.assertEqual(response.status_code, 200)
 
     def test_compile(self):
         app = Flask('working')
         make_static = MakeStatic(app)
+        make_static.compile()
+
+        # ensure that app is not patched and assets are not compiled on demand
+        app = Flask('working')
+        client = app.test_client()
+        with closing(client.get('/static/foo')) as response:
+            self.assertEqual(response.status_code, 200)
+
+        with closing(client.get('/static/spam')) as response:
+            self.assertEqual(response.status_code, 200)
+
+        with closing(client.get('/static/bar')) as response:
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data, b'abc\ndef\n')
+
+        with closing(client.get('/static/eggs.css')) as response:
+            self.assertEqual(response.status_code, 200)
+
+    def test_compile_in_app_context(self):
+        app = Flask('working')
+        make_static = MakeStatic()
+        make_static.init_app(app)
         with app.app_context():
             make_static.compile()
 
@@ -306,8 +350,7 @@ class MakeStaticTestCase(unittest.TestCase):
         app = Flask('working_globbing')
         app.config['MAKESTATIC_FILEPATTERN_FORMAT'] = 'globbing'
         make_static = MakeStatic(app)
-        with app.app_context():
-            make_static.compile()
+        make_static.compile()
 
         # ensure that app is not patched and assets are not compiled on demand
         app = Flask('working_globbing')
@@ -329,12 +372,18 @@ class MakeStaticTestCase(unittest.TestCase):
         app = Flask('missing_rule')
         make_static = MakeStatic(app)
         with catch_warnings(record=True) as warnings:
-            with app.app_context():
-                make_static.compile()
+            make_static.compile()
         self.assertEqual(len(warnings), 1)
         self.assertTrue(issubclass(warnings[-1].category, RuleMissing))
         self.assertEqual(str(warnings[-1].message),
                          'cannot find a rule for foo.css')
+
+    def test_compile_factory_pattern_without_app_context(self):
+        app = Flask('working')
+        make_static = MakeStatic()
+        make_static.init_app(app)
+        with self.assertRaises(RuntimeError):
+            make_static.compile()
 
 
 class WatcherTestCase(unittest.TestCase):

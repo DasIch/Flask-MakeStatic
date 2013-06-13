@@ -11,8 +11,10 @@ import re
 import warnings
 import subprocess
 from fnmatch import fnmatch
+from functools import wraps, partial
 from itertools import starmap, repeat, takewhile
 
+from flask import current_app, _app_ctx_stack
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
@@ -30,6 +32,22 @@ def repeatfunc(func):
 
 def unzip(zipped):
     return map(list, zip(*zipped))
+
+
+def new_app_context(f_or_app, appctx=None):
+    if hasattr(f_or_app, 'app_context'):
+        return partial(new_app_context, appctx=f_or_app.app_context())
+    if appctx is None:
+        if _app_ctx_stack.top is None:
+            raise RuntimeError('This decorator can only be used at local '
+                               'scopes when an app context is on the stack. '
+                               'For instance within view functions.')
+        appctx = _app_ctx_stack.top.app.app_context()
+    @wraps(f_or_app)
+    def wrapper(*args, **kwargs):
+        with appctx:
+            return f_or_app(*args, **kwargs)
+    return wrapper
 
 
 class RuleMissing(Warning):
@@ -138,21 +156,53 @@ class MakeStatic(object):
 
     Once initialized :class:`MakeStatic` will parse the `assets.cfg`
     configuration file corresponding to the initialized application.
-    """
-    def __init__(self, app):
-        self.app = app
 
-        with self.app.open_resource('assets.cfg', 'r') as config_file:
-            self.get_commands = _ConfigParser(
+    Since 0.3.0 :class:`MakeStatic` can also be used with the factory pattern::
+
+        make_static = MakeStatic()
+        app = Flask(__name__)
+        make_static.init_app(app)
+
+    Take a look at :meth:`init_app` for more information.
+    """
+    def __init__(self, app=None):
+        self.app = app
+        if app is not None:
+            self.init_app(app)
+
+    def init_app(self, app):
+        """
+        Initializes a :class:`flask.Flask` instance for use with this
+        extension. Unlike calling :class:`MakeStatic` with an app this will not
+        bind the extension object to the given `app` so calls to :meth:`watch`
+        or :meth:`compile` have to be done in an application context::
+
+            make_static = MakeStatic()
+
+            app = Flask(__name__)
+            make_static.init_app(app)
+            with app.app_context():
+                make_static.compile()
+
+        .. versionadded:: 0.3.0
+        """
+        with app.open_resource('assets.cfg', 'r') as config_file:
+            app.extensions['MakeStatic'] = _ConfigParser(
                 config_file,
-                self.app.config.setdefault(
-                    'MAKESTATIC_FILEPATTERN_FORMAT', 'regex'
-                )
+                app.config.setdefault('MAKESTATIC_FILEPATTERN_FORMAT', 'regex')
             ).parse()
 
     @property
     def assets_folder(self):
-        return os.path.join(self.app.root_path, 'assets')
+        return os.path.join(self._get_app().root_path, 'assets')
+
+    def _get_app(self):
+        if self.app is None:
+            return current_app
+        return self.app
+
+    def get_commands(self, filename):
+        return self._get_app().extensions['MakeStatic'](filename)
 
     def watch(self, sleep=0.1):
         """
@@ -177,6 +227,7 @@ class MakeStatic(object):
             return
         watcher = ThreadedWatcher()
         @watcher.file_added.connect
+        @new_app_context(self._get_app())
         def on_file_added(filename):
             print(
                 u'Flask-MakeStatic: detected new asset %s, compiling' %
@@ -184,6 +235,7 @@ class MakeStatic(object):
             )
             self.compile_asset(filename)
         @watcher.file_modified.connect
+        @new_app_context(self._get_app())
         def on_file_modified(filename):
             print(
                 u'Flask-MakeStatic: detected change in %s, compiling' %
@@ -218,14 +270,14 @@ class MakeStatic(object):
                 RuleMissing,
             )
         else:
-            static = os.path.join(self.app.static_folder, relative_filename)
+            static = os.path.join(self._get_app().static_folder, relative_filename)
             static_base = os.path.splitext(static)[0]
             for command in commands:
                 subprocess.check_call(
                     command.format(
                         asset=filename,
                         static=static,
-                        static_dir=self.app.static_folder,
+                        static_dir=self._get_app().static_folder,
                         static_base=static_base
                     ),
                     shell=True

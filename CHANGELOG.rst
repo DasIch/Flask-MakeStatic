@@ -3,6 +3,8 @@ Version 0.3.0
 
 *In development*
 
+- Added support for factory pattern usage.
+
 Version 0.2.0
 `````````````
 
