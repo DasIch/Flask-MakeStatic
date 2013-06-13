@@ -35,7 +35,7 @@ setup(
     zip_safe=False,
     include_package_data=True,
     platforms='any',
-    install_requires=['Flask>=0.9'],
+    install_requires=['Flask>=0.10'],
     test_suite='test_makestatic.suite',
     classifiers=[
         'Environment :: Web Environment',
