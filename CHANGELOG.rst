@@ -1,9 +1,15 @@
 Version 0.3.0
 `````````````
 
+- Added support for factory pattern usage.
+
+Version 0.2.1
+`````````````
+
 *In development*
 
-- Added support for factory pattern usage.
+- Fixed bug in the HTML build of the documentation that could cause the title
+  to overlap with the text in some cases.
 
 Version 0.2.0
 `````````````
