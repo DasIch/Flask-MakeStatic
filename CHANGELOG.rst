@@ -3,6 +3,9 @@ Version 0.2.1
 
 *In development*
 
+- Fixed bug in the HTML build of the documentation that could cause the title
+  to overlap with the text in some cases.
+
 Version 0.2.0
 `````````````
 
