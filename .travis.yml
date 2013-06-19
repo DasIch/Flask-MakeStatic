@@ -6,9 +6,13 @@ python:
   - pypy
   - 3.3
 
+env:
+  - REQUIREMENTS=lowest
+  - REQUIREMENTS=release
+  - REQUIREMENTS=devel
+
 install:
-  - pip install git+git://github.com/mitsuhiko/werkzeug.git#egg=Werkzeug
-  - pip install git+git://github.com/mitsuhiko/flask.git#egg=Flask
+  - pip install -r .travis-$REQUIREMENTS-requirements.txt
   - pip install --use-mirrors sphinx pyflakes
   - pip install --editable .
 
