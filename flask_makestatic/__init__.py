@@ -16,8 +16,8 @@ from itertools import starmap, repeat, takewhile
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
-__version__ = '0.2.0'
-__version_info__ = (0, 2, 0)
+__version__ = '0.2.1-dev'
+__version_info__ = (0, 2, 1)
 
 
 _section_re = re.compile(r"\[(?P<file_re>[^\]]+)\]")
