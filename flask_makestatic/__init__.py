@@ -16,7 +16,7 @@ from itertools import starmap, repeat, takewhile
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
-__version__ = '0.2.1-dev'
+__version__ = '0.2.1'
 __version_info__ = (0, 2, 1)
 
 
