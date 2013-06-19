@@ -83,6 +83,52 @@ API
 .. autoclass:: RuleMissing
 
 
+.. _differences:
+
+Differences to other Extensions
+-------------------------------
+
+Quite often when discussing Flask-MakeStatic, people ask why they should use
+Flask-MakeStatic instead of some other extension or what the differences are.
+
+This resource cannot provide an unbiased answer to that question, so if you
+want one, you will have to compare the extensions yourself but I will
+nevertheless attempt to provide at least a partial answer and defense for the
+design of this extension.
+
+So far I am aware of two other extensions that intend to solve the same problem
+as Flask-MakeStatic, these are Flask-Assets_ and Flask-Funnel_.
+
+Unlike Flask-MakeStatic these extensions work by defining so called bundles,
+within the code of your application on which filters are applied, which perform
+the actual compilation.
+
+In both cases you need to use extension specific code in your templates. In the
+case of Flask-Assets_ you even need to define the bundles, made up of your
+assets within the code of your application.
+
+Both extensions have more knowledge about the filters you use and how you use
+them, this can be convenient and could possibly enable features, that cannot be
+provided by Flask-MakeStatic. On the other side this also restricts you, in
+your choice of filters. In the case of Flask-Funnel_ as of version 0.1.4 there
+is no documented way of adding any filters at all, in the case of Flask-Assets_
+you can create your own filters and while this appears to be trivial and well
+documented it still requires code specifically for that purpose.
+
+I created Flask-MakeStatic because I think that the frontend of your
+application, in which I include static resources, assets, and templates, should
+be as independent from your backend as reasonably possible. Flask-Assets_ and
+Flask-Funnel_ violate this principle by coupling of front- and backend and
+creating restrictions on the frontend beyond what I consider reasonable.
+
+Flask-MakeStatic embraces this principle by providing you with a make inspired
+way to compile assets, in a way that integrates well with Flask applications.
+
+
+.. _Flask-Assets: http://elsdoerfer.name/docs/flask-assets/
+.. _Flask-Funnel: http://flask-funnel.readthedocs.org/en/latest/
+
+
 Changelog
 ---------
 
