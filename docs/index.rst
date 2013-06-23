@@ -129,16 +129,8 @@ way to compile assets, in a way that integrates well with Flask applications.
 .. _Flask-Funnel: http://flask-funnel.readthedocs.org/en/latest/
 
 
-Changelog
----------
-
 .. include:: ../CHANGELOG.rst
 
-
 .. include:: ../CONTRIBUTING.rst
-
-
-License
--------
 
 .. include:: ../LICENSE.rst
