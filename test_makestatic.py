@@ -64,7 +64,7 @@ class MakeStaticTestCase(unittest.TestCase):
         for test_app_dir in os.listdir(TEST_APPS):
             static_dir = os.path.join(TEST_APPS, test_app_dir, 'static')
             if os.path.isdir(static_dir):
-                for root, dirs, files in os.walk(static_dir):
+                for root, dirs, files in os.walk(static_dir, topdown=False):
                     for file in files:
                         if file == '.gitignore':
                             continue
