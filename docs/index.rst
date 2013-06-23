@@ -135,6 +135,9 @@ Changelog
 .. include:: ../CHANGELOG.rst
 
 
+.. include:: ../CONTRIBUTING.rst
+
+
 License
 -------
 
