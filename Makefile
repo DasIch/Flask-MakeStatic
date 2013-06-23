@@ -1,4 +1,4 @@
-.PHONY: test style docs view-docs
+.PHONY: test style docs view-docs coverage view-coverage
 
 test: style
 	python test_makestatic.py
@@ -11,3 +11,10 @@ docs:
 
 view-docs: docs
 	open docs/_build/html/index.html
+
+coverage:
+	coverage run --source=flask_makestatic test_makestatic.py
+
+view-coverage: coverage
+	coverage html
+	open htmlcov/index.html
