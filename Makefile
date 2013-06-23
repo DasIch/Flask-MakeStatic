@@ -1,13 +1,18 @@
-.PHONY: help test style docs view-docs coverage view-coverage
+.PHONY: help dev test style docs view-docs coverage view-coverage
 
 help:
 	@echo "make help          - Show this text"
+	@echo "make dev           - Install development dependencies"
 	@echo "make test          - Run the tests"
 	@echo "make style         - Run pyflakes"
 	@echo "make docs          - Build the docs"
 	@echo "make view-docs     - Open the docs in a browser"
 	@echo "make coverage      - Create a coverage report"
 	@echo "make view-coverage - Open coverage report in a browser"
+
+dev:
+	pip install -r dev-requirements.txt
+	pip install --editable .
 
 test: style
 	python test_makestatic.py
