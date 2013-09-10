@@ -18,7 +18,7 @@ from flask import current_app, _app_ctx_stack
 from flask.ext.makestatic.watcher import ThreadedWatcher
 
 
-__version__ = '0.3.0-dev'
+__version__ = '0.3.0'
 __version_info__ = (0, 3, 0)
 
 

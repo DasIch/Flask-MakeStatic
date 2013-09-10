@@ -4,8 +4,6 @@ Changelog
 Version 0.3.0
 `````````````
 
-*In development*
-
 - Added support for factory pattern usage.
 - Added :ref:`differences` section to the documentation.
 
